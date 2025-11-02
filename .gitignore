@@ -11,3 +11,6 @@ __pycache__/
 
 # Ignore scraped job files
 scraped_jobs_*.txt
+
+# Ignore proxy files
+proxies.txt
