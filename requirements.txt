@@ -1,6 +1,5 @@
-requests==2.31.0
-beautifulsoup4==4.12.2
+# Dependencies for working Selenium scraper
 python-dotenv==1.0.0
 supabase==2.3.0
-lxml==4.9.3
-fake-useragent==1.4.0
+selenium>=4.0.0
+webdriver-manager>=4.0.0
