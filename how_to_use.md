@@ -74,8 +74,9 @@ python scraper_selenium.py
 
 1. **Browser Initialization**: Chrome opens in background (headless mode)
 2. **Proxy Usage**: Rotates through proxies to avoid detection
-3. **Job Scraping**: Visits Indeed pages and extracts job data
-4. **Data Saving**: Saves to both:
+3. **Job Scraping**: Visits Indeed search pages and extracts job data
+4. **Detailed Extraction**: Visits individual job pages for complete salary information
+5. **Data Saving**: Saves to both:
    - Text file: `scraped_jobs_TIMESTAMP.txt`
    - Database: Supabase (for querying later)
 
@@ -87,12 +88,14 @@ python scraper_selenium.py
 TITLE: Senior Python Developer
 COMPANY: Tech Corp
 LOCATION: Remote
-SALARY: $120,000 - $150,000
+SALARY: $120,000 - $150,000 a year
 POSTED: 2 days ago
 LINK: https://indeed.com/viewjob?jk=abc123
 SUMMARY: We are looking for a skilled Python developer...
 ================================================================================
 ```
+
+**Note**: The scraper now visits individual job pages to get accurate salary data, so it takes a bit longer but provides complete information!
 
 ### View Database Results:
 ```bash

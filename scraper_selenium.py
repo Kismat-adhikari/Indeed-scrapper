@@ -191,7 +191,7 @@ class IndeedScraperV2:
             return []
     
     def extract_job_data(self, element):
-        """Extract job data from element"""
+        """Extract job data from search results element"""
         try:
             job = {}
             
@@ -211,52 +211,116 @@ class IndeedScraperV2:
             if not job.get('link'):
                 return None
             
-            # Extract title
+            # Extract basic info from search results
             try:
                 title_elem = element.find_element(By.CSS_SELECTOR, "h2.jobTitle, a.jcs-JobTitle, span[title]")
                 job['title'] = title_elem.text.strip()
             except:
                 job['title'] = None
             
-            # Extract company
             try:
                 company_elem = element.find_element(By.CSS_SELECTOR, "span[data-testid='company-name'], span.companyName")
                 job['company'] = company_elem.text.strip()
             except:
                 job['company'] = None
             
-            # Extract location
             try:
                 location_elem = element.find_element(By.CSS_SELECTOR, "div[data-testid='text-location'], div.companyLocation")
                 job['location'] = location_elem.text.strip()
             except:
                 job['location'] = None
             
-            # Extract salary
-            try:
-                salary_elem = element.find_element(By.CSS_SELECTOR, "div[data-testid='attribute_snippet_testid'], div.salary-snippet")
-                job['salary'] = salary_elem.text.strip()
-            except:
-                job['salary'] = None
-            
-            # Extract summary
             try:
                 summary_elem = element.find_element(By.CSS_SELECTOR, "div.job-snippet, ul")
                 job['summary'] = summary_elem.text.strip()
             except:
                 job['summary'] = None
             
-            # Extract posted date
-            try:
-                date_elem = element.find_element(By.CSS_SELECTOR, "span.date")
-                job['posted_date'] = date_elem.text.strip()
-            except:
-                job['posted_date'] = None
+            # Get detailed info from job page (salary, posted date)
+            detailed_info = self.get_job_details(job['link'])
+            job.update(detailed_info)
             
             return job if job.get('title') else None
             
         except Exception as e:
             return None
+    
+    def get_job_details(self, job_url):
+        """Visit individual job page to get salary and posted date"""
+        details = {'salary': None, 'posted_date': None}
+        
+        try:
+            # Save current window handle
+            original_window = self.driver.current_window_handle
+            
+            # Open new tab for job details
+            self.driver.execute_script("window.open('');")
+            self.driver.switch_to.window(self.driver.window_handles[-1])
+            
+            # Navigate to job page
+            self.driver.get(job_url)
+            time.sleep(random.uniform(1, 2))  # Quick delay
+            
+            # Extract salary with multiple selectors
+            salary_selectors = [
+                "#salaryInfoAndJobType span",
+                "span[data-testid='viewJobBodyJobCompensation']",
+                "div[data-testid='viewJobBodyJobCompensation']",
+                ".js-match-insights-provider-compensation span",
+                ".css-14jvju9",
+                ".jobsearch-JobMetadataHeader-item span",
+            ]
+            
+            for selector in salary_selectors:
+                try:
+                    elements = self.driver.find_elements(By.CSS_SELECTOR, selector)
+                    for elem in elements:
+                        text = elem.text.strip()
+                        if text and ('$' in text or 'year' in text or 'hour' in text):
+                            details['salary'] = text
+                            break
+                    if details['salary']:
+                        break
+                except:
+                    continue
+            
+            # Extract posted date with multiple selectors  
+            date_selectors = [
+                "div[data-testid='jobEventDate']",
+                ".jobsearch-JobMetadataHeader-iconLabel",
+                "span[data-testid='posted-date']", 
+                ".js-match-insights-provider-tvoc span",
+                "time",
+                "span[aria-label*='ago']",
+            ]
+            
+            for selector in date_selectors:
+                try:
+                    elements = self.driver.find_elements(By.CSS_SELECTOR, selector)
+                    for elem in elements:
+                        text = elem.text.strip()
+                        if text and ('ago' in text or 'day' in text or 'hour' in text or 'Posted' in text):
+                            details['posted_date'] = text
+                            break
+                    if details['posted_date']:
+                        break
+                except:
+                    continue
+            
+            # Close tab and return to original window
+            self.driver.close()
+            self.driver.switch_to.window(original_window)
+            
+        except Exception as e:
+            # Make sure we return to original window even if error occurs
+            try:
+                if len(self.driver.window_handles) > 1:
+                    self.driver.close()
+                    self.driver.switch_to.window(self.driver.window_handles[0])
+            except:
+                pass
+        
+        return details
     
     def save_jobs(self, jobs: List[Dict], output_file: str) -> int:
         """Save jobs to database and file"""
