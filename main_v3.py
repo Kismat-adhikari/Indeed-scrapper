@@ -8,6 +8,7 @@ import os
 from datetime import datetime
 from pathlib import Path
 
+import pandas as pd
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.panel import Panel
@@ -19,18 +20,42 @@ from proxy_manager import ProxyManager
 console = Console()
 
 
-def generate_output_filename() -> str:
-    """Generate unique output filename."""
+def generate_output_filename() -> tuple[str, str]:
+    """Generate unique output filenames for both JSON and CSV."""
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"results_{timestamp}.json"
-    return os.path.join("output", filename)
+    json_filename = f"results_{timestamp}.json"
+    csv_filename = f"results_{timestamp}.csv"
+    return (
+        os.path.join("output", json_filename),
+        os.path.join("output", csv_filename)
+    )
 
 
-def save_results(jobs, output_path: str):
-    """Save results to JSON."""
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    with open(output_path, 'w', encoding='utf-8') as f:
+def save_results(jobs, json_path: str, csv_path: str):
+    """Save results to both JSON and CSV formats."""
+    # Create output directory
+    os.makedirs(os.path.dirname(json_path), exist_ok=True)
+    
+    # Save JSON file
+    with open(json_path, 'w', encoding='utf-8') as f:
         json.dump(jobs, f, indent=2, ensure_ascii=False)
+    
+    # Save CSV file
+    if jobs:
+        try:
+            df = pd.DataFrame(jobs)
+            # Reorder columns for better readability
+            column_order = ['title', 'company', 'location', 'salary', 'salary_period', 
+                          'job_type', 'posted_date', 'summary', 'url', 'scraped_from_page']
+            # Only include columns that exist in the data
+            existing_columns = [col for col in column_order if col in df.columns]
+            df = df[existing_columns]
+            
+            # Save to CSV
+            df.to_csv(csv_path, index=False, encoding='utf-8')
+        except Exception as e:
+            console.print(f"[yellow]⚠️ Could not save CSV file: {e}[/yellow]")
+            console.print("[dim]JSON file saved successfully though![/dim]")
 
 
 def main():
@@ -71,8 +96,8 @@ def main():
         jobs = scraper.scrape_all_pages()
         
         # Save results
-        output_path = generate_output_filename()
-        save_results(jobs, output_path)
+        json_path, csv_path = generate_output_filename()
+        save_results(jobs, json_path, csv_path)
         
         # Display summary
         console.print("\n")
@@ -80,7 +105,8 @@ def main():
             f"[bold green]✅ Scraping Complete![/bold green]\n\n"
             f"[cyan]Jobs Scraped:[/cyan] {len(jobs)}\n"
             f"[cyan]Pages Scraped:[/cyan] {pages}\n"
-            f"[cyan]Output File:[/cyan] {output_path}",
+            f"[cyan]JSON File:[/cyan] {json_path}\n"
+            f"[cyan]CSV File:[/cyan] {csv_path}",
             border_style="green"
         ))
         

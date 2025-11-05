@@ -11,6 +11,9 @@ lxml>=4.9.0
 # CLI and UI
 rich>=13.7.0
 
+# CSV export functionality
+pandas>=2.0.0
+
 # Original Playwright (keep as backup)
 playwright>=1.40.0
 
