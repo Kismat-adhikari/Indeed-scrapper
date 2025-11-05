@@ -153,16 +153,6 @@ class IndeedScraperV3:
             self.driver.get(url)
             time.sleep(random.uniform(4, 6))
             
-            # Save HTML for debugging
-            debug_file = f"output/debug_v3_page_{page_number}.html"
-            try:
-                os.makedirs('output', exist_ok=True)
-                with open(debug_file, 'w', encoding='utf-8') as f:
-                    f.write(self.driver.page_source)
-                print(f"(saved HTML to {debug_file}) ", end='', flush=True)
-            except:
-                pass
-            
             # Check for CAPTCHA
             if self._check_for_captcha():
                 print("\n⚠️  CAPTCHA detected!")
