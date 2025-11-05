@@ -1,0 +1,102 @@
+{
+  "72.46.139.137:6697": {
+    "success_count": 0,
+    "failure_count": 0,
+    "captcha_count": 0,
+    "health_score": "EXCELLENT",
+    "total_sessions": 0,
+    "successful_sessions": 0,
+    "last_used": null,
+    "cooldown_until": null
+  },
+  "45.196.40.119:6197": {
+    "success_count": 5,
+    "failure_count": 0,
+    "captcha_count": 0,
+    "health_score": "EXCELLENT",
+    "total_sessions": 1,
+    "successful_sessions": 1,
+    "last_used": "2025-11-05T17:21:09.215620",
+    "cooldown_until": null
+  },
+  "156.238.179.127:6695": {
+    "success_count": 0,
+    "failure_count": 0,
+    "captcha_count": 0,
+    "health_score": "EXCELLENT",
+    "total_sessions": 0,
+    "successful_sessions": 0,
+    "last_used": null,
+    "cooldown_until": null
+  },
+  "216.98.249.139:7120": {
+    "success_count": 0,
+    "failure_count": 0,
+    "captcha_count": 0,
+    "health_score": "EXCELLENT",
+    "total_sessions": 0,
+    "successful_sessions": 0,
+    "last_used": null,
+    "cooldown_until": null
+  },
+  "154.194.27.141:6681": {
+    "success_count": 2,
+    "failure_count": 0,
+    "captcha_count": 0,
+    "health_score": "EXCELLENT",
+    "total_sessions": 1,
+    "successful_sessions": 1,
+    "last_used": "2025-11-05T17:34:03.376288",
+    "cooldown_until": null
+  },
+  "130.180.231.198:8340": {
+    "success_count": 6,
+    "failure_count": 0,
+    "captcha_count": 0,
+    "health_score": "EXCELLENT",
+    "total_sessions": 1,
+    "successful_sessions": 1,
+    "last_used": "2025-11-05T17:29:26.942209",
+    "cooldown_until": null
+  },
+  "130.180.228.219:6503": {
+    "success_count": 0,
+    "failure_count": 0,
+    "captcha_count": 0,
+    "health_score": "EXCELLENT",
+    "total_sessions": 0,
+    "successful_sessions": 0,
+    "last_used": null,
+    "cooldown_until": null
+  },
+  "45.196.50.76:6398": {
+    "success_count": 0,
+    "failure_count": 0,
+    "captcha_count": 0,
+    "health_score": "EXCELLENT",
+    "total_sessions": 0,
+    "successful_sessions": 0,
+    "last_used": null,
+    "cooldown_until": null
+  },
+  "154.194.24.252:5862": {
+    "success_count": 1,
+    "failure_count": 0,
+    "captcha_count": 0,
+    "health_score": "EXCELLENT",
+    "total_sessions": 1,
+    "successful_sessions": 1,
+    "last_used": "2025-11-05T17:30:04.259898",
+    "cooldown_until": null
+  },
+  "72.46.139.104:6664": {
+    "success_count": 0,
+    "failure_count": 0,
+    "captcha_count": 0,
+    "health_score": "EXCELLENT",
+    "total_sessions": 0,
+    "successful_sessions": 0,
+    "last_used": null,
+    "cooldown_until": null
+  }
+}

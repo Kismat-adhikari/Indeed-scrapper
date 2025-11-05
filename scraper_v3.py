@@ -1,7 +1,7 @@
 """
 Indeed Scraper v3.0 - Anti-Bot Protection Bypass
 ================================================
-Uses undetected-chromedriver to bypass Cloudflare protection.
+Uses undetected-chromedriver to bypass Cloudflare protection with session-based proxy rotation.
 """
 
 import asyncio
@@ -17,28 +17,32 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
 
 from chrome_driver_manager import get_driver
+from session_manager import SessionManager, ProxySession
+from human_behavior import HumanBehaviorSimulator
 
 
 class IndeedScraperV3:
     """
-    Scraper using undetected-chromedriver to bypass bot detection.
+    Scraper using undetected-chromedriver with session-based proxy rotation.
     """
     
-    def __init__(self, base_url: str, page_count: int, proxies: List[Dict]):
+    def __init__(self, base_url: str, page_count: int, proxy_file: str = "proxies.txt"):
         self.base_url = base_url
         self.page_count = page_count
-        self.proxies = proxies
-        self.current_proxy_index = 0
+        self.session_manager = SessionManager(proxy_file)
+        self.current_session: Optional[ProxySession] = None
         self.driver = None
+        self.human_behavior: Optional[HumanBehaviorSimulator] = None
+        
+        # Load existing proxy statistics
+        if self.session_manager:
+            self.session_manager.load_proxy_stats("proxy_stats.json")
     
     def _get_next_proxy(self) -> Optional[Dict]:
-        """Get next proxy from rotation."""
-        if not self.proxies:
-            return None
-        
-        proxy = self.proxies[self.current_proxy_index]
-        self.current_proxy_index = (self.current_proxy_index + 1) % len(self.proxies)
-        return proxy
+        """Get proxy from current session."""
+        if self.current_session:
+            return self.current_session.proxy
+        return None
     
     def _build_page_url(self, page_number: int) -> str:
         """Build URL for specific page."""
@@ -62,15 +66,27 @@ class IndeedScraperV3:
         
         return new_url
     
-    def _init_driver(self, use_proxy: bool = True) -> uc.Chrome:
-        """Initialize Chrome driver with automatic version detection."""
-        proxy_config = None
+    def _init_driver(self, session: Optional[ProxySession] = None) -> uc.Chrome:
+        """Initialize Chrome driver with session-based proxy authentication."""
+        if session and session.proxy:
+            # Use ProxyAuthManager for automatic authentication
+            proxy_auth_manager = self.session_manager.proxy_auth_manager if self.session_manager else None
+            driver = get_driver(
+                use_proxy=True, 
+                proxy_config=session.proxy,
+                proxy_auth_manager=proxy_auth_manager
+            )
+        else:
+            # No proxy or session
+            driver = get_driver(use_proxy=False)
         
-        if use_proxy and self.proxies:
-            proxy_config = self._get_next_proxy()
+        # Set session-specific user agent if available
+        if session and session.user_agent:
+            try:
+                driver.execute_script(f"Object.defineProperty(navigator, 'userAgent', {{get: function() {{ return '{session.user_agent}'; }}}});")
+            except:
+                pass  # Ignore if script fails
         
-        # Use the new universal driver manager
-        driver = get_driver(use_proxy=use_proxy, proxy_config=proxy_config)
         return driver
     
     def _check_for_captcha(self) -> bool:
@@ -82,11 +98,15 @@ class IndeedScraperV3:
                 return False
             # Only flag as CAPTCHA if it's actually blocking
             page_lower = page_source.lower()
-            if 'just a moment' in page_lower and 'cloudflare' in page_lower:
-                return True
-            if 'challenge-platform' in page_lower:
-                return True
-            return False
+            captcha_indicators = [
+                'just a moment' in page_lower and 'cloudflare' in page_lower,
+                'challenge-platform' in page_lower,
+                'captcha' in page_lower,
+                'please verify you are a human' in page_lower,
+                'access denied' in page_lower,
+                'blocked' in page_lower and 'request' in page_lower
+            ]
+            return any(captcha_indicators)
         except:
             return False
     
@@ -107,30 +127,20 @@ class IndeedScraperV3:
         return False
     
     def _simulate_human_behavior(self):
-        """Simulate human-like behavior."""
-        # Random scroll
-        scroll_amount = random.randint(300, 800)
-        self.driver.execute_script(f"window.scrollBy(0, {scroll_amount});")
-        time.sleep(random.uniform(0.5, 1.5))
-        
-        # Scroll back a bit
-        self.driver.execute_script(f"window.scrollBy(0, -{scroll_amount // 2});")
-        time.sleep(random.uniform(0.3, 0.8))
-        
-        # Move mouse (using JavaScript)
-        self.driver.execute_script("""
-            var event = new MouseEvent('mousemove', {
-                'view': window,
-                'bubbles': true,
-                'cancelable': true,
-                'clientX': Math.random() * window.innerWidth,
-                'clientY': Math.random() * window.innerHeight
-            });
-            document.dispatchEvent(event);
-        """)
+        """Simulate human-like behavior using dedicated simulator."""
+        if self.human_behavior:
+            self.human_behavior.simulate_page_arrival()
+        else:
+            # Fallback to basic behavior
+            scroll_amount = random.randint(300, 800)
+            self.driver.execute_script(f"window.scrollBy(0, {scroll_amount});")
+            time.sleep(random.uniform(0.5, 1.5))
+            
+            self.driver.execute_script(f"window.scrollBy(0, -{scroll_amount // 2});")
+            time.sleep(random.uniform(0.3, 0.8))
     
     def _scrape_page(self, page_number: int) -> List[Dict]:
-        """Scrape a single page."""
+        """Scrape a single page with session-based approach."""
         url = self._build_page_url(page_number)
         jobs = []
         
@@ -139,11 +149,16 @@ class IndeedScraperV3:
         try:
             # Navigate to page
             self.driver.get(url)
-            time.sleep(random.uniform(4, 6))
             
-            # Check for CAPTCHA
+            # Initial wait for page load
+            time.sleep(random.uniform(3, 5))
+            
+            # Check for CAPTCHA immediately
             if self._check_for_captcha():
-                print("\n⚠️  CAPTCHA detected!")
+                print("🛡️ CAPTCHA detected!")
+                if self.session_manager:
+                    self.session_manager.record_failure(is_captcha=True)
+                
                 if not self._wait_for_captcha_solve():
                     print("❌ Failed - CAPTCHA not solved")
                     return []
@@ -152,8 +167,11 @@ class IndeedScraperV3:
             page_title = self.driver.title
             print(f"(title: {page_title[:30]}...) ", end='', flush=True)
             
-            # Simulate human behavior
-            self._simulate_human_behavior()
+            # Enhanced human behavior simulation
+            if self.human_behavior:
+                self.human_behavior.simulate_page_arrival()
+            else:
+                self._simulate_human_behavior()
             
             # Wait for job cards with multiple strategies
             selectors_to_try = [
@@ -167,7 +185,7 @@ class IndeedScraperV3:
             element_found = False
             for selector_type, selector_value in selectors_to_try:
                 try:
-                    WebDriverWait(self.driver, 5).until(
+                    WebDriverWait(self.driver, 8).until(
                         EC.presence_of_element_located((selector_type, selector_value))
                     )
                     element_found = True
@@ -178,6 +196,9 @@ class IndeedScraperV3:
             
             if not element_found:
                 print("(no job elements found) ", end='', flush=True)
+                if self.session_manager:
+                    self.session_manager.record_failure()
+                return []
             
             # Get page HTML
             html = self.driver.page_source
@@ -187,14 +208,28 @@ class IndeedScraperV3:
             
             if extracted_jobs:
                 print(f"Found {len(extracted_jobs)} jobs from JSON")
+                
+                # Simulate human browsing behavior for the found jobs
+                if self.human_behavior:
+                    browse_time = self.human_behavior.simulate_job_browsing(len(extracted_jobs))
+                    print(f"   ⏱️ Browsed jobs for {browse_time:.1f} seconds")
+                
                 for job in extracted_jobs:
                     job['scraped_from_page'] = page_number
                     jobs.append(job)
+                
+                # Record success with session manager
+                if self.session_manager:
+                    self.session_manager.record_success()
             else:
                 print("⚠️ No jobs found in JSON data")
+                if self.session_manager:
+                    self.session_manager.record_failure()
             
         except Exception as e:
             print(f"❌ Error: {str(e)}")
+            if self.session_manager:
+                self.session_manager.record_failure()
         
         return jobs
     
@@ -419,22 +454,81 @@ class IndeedScraperV3:
             return None
     
     def scrape_all_pages(self) -> List[Dict]:
-        """Scrape all pages."""
+        """Scrape all pages using session-based proxy rotation."""
         all_jobs = []
+        pages_scraped = 0
         
         try:
-            # Initialize driver
-            print("🚀 Starting Chrome browser...")
-            self.driver = self._init_driver(use_proxy=False)  # Start without proxy first
+            print("🚀 Starting session-based scraping...")
             
-            for page_num in range(1, self.page_count + 1):
-                jobs = self._scrape_page(page_num)
-                all_jobs.extend(jobs)
-                print(f"  ✓ Page {page_num} complete: {len(jobs)} jobs scraped")
+            # Display proxy pool status
+            if self.session_manager:
+                pool_status = self.session_manager.get_proxy_pool_status()
+                print(f"� Proxy pool: {pool_status['healthy_proxies']}/{pool_status['total_proxies']} healthy proxies")
+            
+            while pages_scraped < self.page_count:
+                # Check if we need a new session
+                if not self.current_session or self.session_manager.should_rotate_session():
+                    self._start_new_session()
+                    
+                    if not self.current_session:
+                        print("❌ No healthy proxies available. Stopping.")
+                        break
                 
-                if page_num < self.page_count:
-                    time.sleep(random.uniform(3, 6))
+                # Calculate pages remaining in this session
+                pages_remaining_in_session = min(
+                    self.current_session.max_pages - self.current_session.pages_scraped,
+                    self.page_count - pages_scraped
+                )
+                
+                print(f"\n🔄 Session: {self.current_session.session_id}")
+                print(f"   Proxy: {self.current_session.proxy.get('server', 'unknown')}")
+                print(f"   Pages in session: {self.current_session.pages_scraped}/{self.current_session.max_pages}")
+                print(f"   Will scrape {pages_remaining_in_session} more pages")
+                
+                # Scrape pages in this session
+                for session_page in range(pages_remaining_in_session):
+                    page_num = pages_scraped + 1
+                    
+                    # Add session break between pages (except first page of session)
+                    if session_page > 0 and self.human_behavior:
+                        self.human_behavior.simulate_session_break()
+                    
+                    jobs = self._scrape_page(page_num)
+                    all_jobs.extend(jobs)
+                    pages_scraped += 1
+                    
+                    print(f"  ✓ Page {page_num} complete: {len(jobs)} jobs scraped")
+                    
+                    # Check if session was terminated due to CAPTCHA
+                    if self.current_session and not self.current_session.is_active:
+                        print("   🛡️ Session terminated due to CAPTCHA")
+                        break
+                    
+                    # Inter-page delay within session
+                    if session_page < pages_remaining_in_session - 1:
+                        delay = random.uniform(2, 5)
+                        time.sleep(delay)
+                
+                # End session
+                if self.current_session:
+                    successful = not self.current_session.captcha_triggered
+                    self.current_session.end_session(successful=successful)
             
+            # Save proxy statistics
+            if self.session_manager:
+                self.session_manager.save_proxy_stats("proxy_stats.json")
+                
+                # Display final stats
+                final_status = self.session_manager.get_proxy_pool_status()
+                print(f"\n📊 Final proxy pool status:")
+                print(f"   Sessions completed: {final_status['sessions_completed']}")
+                print(f"   Healthy proxies: {final_status['healthy_proxies']}/{final_status['total_proxies']}")
+                
+                for health, count in final_status['health_distribution'].items():
+                    if count > 0:
+                        print(f"   {health}: {count}")
+        
         except Exception as e:
             print(f"\n❌ Error during scraping: {str(e)}")
         finally:
@@ -443,7 +537,35 @@ class IndeedScraperV3:
                 try:
                     self.driver.quit()
                 except:
-                    pass  # Ignore cleanup errors
+                    pass
         
         print(f"\n  📊 Total jobs scraped: {len(all_jobs)}")
         return all_jobs
+    
+    def _start_new_session(self):
+        """Start a new scraping session with fresh proxy."""
+        # Clean up previous session
+        if self.driver:
+            try:
+                self.driver.quit()
+            except:
+                pass
+            self.driver = None
+            self.human_behavior = None
+        
+        # Start new session
+        if self.session_manager:
+            self.current_session = self.session_manager.start_new_session()
+        
+        if self.current_session:
+            # Initialize driver with session proxy
+            print("� Initializing browser for new session...")
+            self.driver = self._init_driver(self.current_session)
+            
+            # Initialize human behavior simulator
+            self.human_behavior = HumanBehaviorSimulator(self.driver)
+        else:
+            # Fallback: no session manager or no proxies
+            print("🚀 Starting browser without proxy session...")
+            self.driver = self._init_driver()
+            self.human_behavior = HumanBehaviorSimulator(self.driver) if self.driver else None

@@ -80,19 +80,14 @@ def main():
         console.print(f"[dim]URL: {url}[/dim]")
         console.print(f"[dim]Pages: {pages}[/dim]\n")
         
-        # Load proxies
-        proxy_file = Path(__file__).parent / "proxies.txt"
-        proxy_manager = ProxyManager(str(proxy_file))
-        proxies = proxy_manager.load_proxies()
-        
-        if proxies:
-            console.print(f"[green]✓ Loaded {len(proxies)} proxies[/green]")
+        # Load proxies (now handled automatically by scraper)
+        print(f"[green]✓ Proxy authentication will be handled automatically[/green]")
         
         console.print(f"[yellow]⚠️  Browser will open - DO NOT CLOSE IT![/yellow]")
         console.print(f"[yellow]   If you see CAPTCHA, solve it manually.[/yellow]\n")
         
-        # Run scraper
-        scraper = IndeedScraperV3(url, pages, proxies)
+        # Run scraper with automatic proxy authentication
+        scraper = IndeedScraperV3(url, pages)
         jobs = scraper.scrape_all_pages()
         
         # Save results

@@ -140,13 +140,14 @@ def _detect_chrome_version_linux() -> Optional[str]:
     return None
 
 
-def get_driver(use_proxy: bool = False, proxy_config: Optional[dict] = None) -> uc.Chrome:
+def get_driver(use_proxy: bool = False, proxy_config: Optional[dict] = None, proxy_auth_manager=None) -> uc.Chrome:
     """
     Universal Chrome driver initialization with automatic version detection.
     
     Args:
         use_proxy: Whether to use proxy
         proxy_config: Proxy configuration dict (optional)
+        proxy_auth_manager: ProxyAuthManager instance for automatic authentication
     
     Returns:
         uc.Chrome: Working Chrome driver instance
@@ -155,6 +156,16 @@ def get_driver(use_proxy: bool = False, proxy_config: Optional[dict] = None) -> 
         Exception: If no working driver can be initialized
     """
     print("🚀 Initializing Chrome driver with automatic version detection...")
+    
+    # If we have a proxy auth manager, use it directly
+    if proxy_auth_manager and use_proxy:
+        try:
+            driver = proxy_auth_manager.create_driver_with_proxy(proxy_config)
+            print("✅ Success! Using ProxyAuthManager with automatic authentication")
+            return driver
+        except Exception as e:
+            print(f"⚠️ ProxyAuthManager failed: {e}")
+            # Fall through to manual setup
     
     # Detect Chrome version
     chrome_version = detect_chrome_version()
@@ -170,8 +181,8 @@ def get_driver(use_proxy: bool = False, proxy_config: Optional[dict] = None) -> 
     options.add_argument('--disable-features=IsolateOrigins,site-per-process')
     options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
     
-    # Add proxy if specified
-    if use_proxy and proxy_config:
+    # Add proxy if specified (legacy method)
+    if use_proxy and proxy_config and not proxy_auth_manager:
         proxy_server = proxy_config.get('server', '').replace('http://', '')
         if proxy_server:
             options.add_argument(f'--proxy-server={proxy_server}')
