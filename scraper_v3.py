@@ -16,6 +16,8 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
 
+from chrome_driver_manager import get_driver
+
 
 class IndeedScraperV3:
     """
@@ -61,28 +63,14 @@ class IndeedScraperV3:
         return new_url
     
     def _init_driver(self, use_proxy: bool = True) -> uc.Chrome:
-        """Initialize undetected Chrome driver."""
-        options = uc.ChromeOptions()
+        """Initialize Chrome driver with automatic version detection."""
+        proxy_config = None
         
-        # Stealth options
-        options.add_argument('--disable-blink-features=AutomationControlled')
-        options.add_argument('--disable-dev-shm-usage')
-        options.add_argument('--no-sandbox')
-        options.add_argument('--disable-web-security')
-        options.add_argument('--disable-features=IsolateOrigins,site-per-process')
-        options.add_argument(f'user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
-        
-        # Add proxy if available
         if use_proxy and self.proxies:
-            proxy = self._get_next_proxy()
-            if proxy:
-                proxy_str = proxy['server'].replace('http://', '')
-                options.add_argument(f'--proxy-server={proxy_str}')
+            proxy_config = self._get_next_proxy()
         
-        # Create driver with undetected-chromedriver
-        driver = uc.Chrome(options=options, version_main=None)
-        driver.set_window_size(1920, 1080)
-        
+        # Use the new universal driver manager
+        driver = get_driver(use_proxy=use_proxy, proxy_config=proxy_config)
         return driver
     
     def _check_for_captcha(self) -> bool:
