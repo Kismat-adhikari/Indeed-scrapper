@@ -1,5 +1,25 @@
-# Dependencies for working Selenium scraper
-python-dotenv==1.0.0
-supabase==2.3.0
-selenium>=4.0.0
-webdriver-manager>=4.0.0
+# Indeed Job Scraper - Python Dependencies
+# ==========================================
+# Install with: pip install -r requirements.txt
+# After installation, run: playwright install
+
+# Core scraping
+playwright>=1.40.0
+beautifulsoup4>=4.12.0
+lxml>=4.9.0
+
+# CLI and UI
+rich>=13.7.0
+
+# Async support (built-in with Python 3.10+, but explicit for clarity)
+# asyncio is built-in, no need to install
+
+# Standard library (no installation needed):
+# - json (built-in)
+# - os (built-in)
+# - pathlib (built-in)
+# - urllib (built-in)
+# - typing (built-in)
+
+# Additional recommended packages
+requests>=2.31.0  # For future API integrations
