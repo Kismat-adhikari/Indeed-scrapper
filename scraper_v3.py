@@ -249,11 +249,11 @@ class IndeedScraperV3:
             for job in jobs_data:
                 try:
                     job_id = job.get('jobkey', '')
-                    title = job.get('title', 'Not specified')
-                    company = job.get('company', 'Not specified')
+                    title = job.get('title', 'Not mentioned')
+                    company = job.get('company', 'Not mentioned')
                     
                     # Extract location
-                    location = 'Not specified'
+                    location = 'Not mentioned'
                     if 'formattedLocation' in job:
                         location = job['formattedLocation']
                     elif 'location' in job:
@@ -261,8 +261,8 @@ class IndeedScraperV3:
                     
                     # ===== EXTRACT SALARY WITH PERIOD DETECTION =====
                     # Handles: $55 - $75 an hour, $95k–$125k, $95,000/year, $140,000 - $150,000 a year
-                    salary = None
-                    salary_period = None
+                    salary = 'Not mentioned'
+                    salary_period = 'Not mentioned'
                     
                     if 'extractedSalary' in job:
                         sal_data = job['extractedSalary']
@@ -304,15 +304,26 @@ class IndeedScraperV3:
                     
                     # ===== EXTRACT JOB TYPE (NOT POSTED DATE!) =====
                     # Job types: Full-time, Part-time, Contract, Internship, Temporary
-                    job_type = None
+                    # Check BOTH jobTypes field AND taxonomyAttributes
+                    job_type = 'Not mentioned'
                     
+                    # Method 1: Check jobTypes field (most reliable)
                     if 'jobTypes' in job and job['jobTypes']:
-                        # This is the CORRECT field for job types
                         job_type = ', '.join(job['jobTypes'])
+                    
+                    # Method 2: Check taxonomyAttributes if jobTypes is empty
+                    elif 'taxonomyAttributes' in job:
+                        for attr in job['taxonomyAttributes']:
+                            if attr.get('label') == 'job-types' and attr.get('attributes'):
+                                # Extract job type labels from attributes
+                                types = [a['label'] for a in attr['attributes'] if 'label' in a]
+                                if types:
+                                    job_type = ', '.join(types)
+                                    break
                     
                     # ===== EXTRACT POSTED DATE =====
                     # This is separate from job type! (e.g., "30+ days ago", "2 days ago")
-                    posted_date = None
+                    posted_date = 'Not mentioned'
                     if 'formattedRelativeTime' in job:
                         posted_date = job['formattedRelativeTime']
                     
@@ -332,7 +343,7 @@ class IndeedScraperV3:
                         summary = summary.strip()
                     
                     # Build URL
-                    job_url = f"https://www.indeed.com/viewjob?jk={job_id}" if job_id else None
+                    job_url = f"https://www.indeed.com/viewjob?jk={job_id}" if job_id else 'Not mentioned'
                     
                     extracted_jobs.append({
                         'title': title,
