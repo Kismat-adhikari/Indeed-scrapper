@@ -221,10 +221,11 @@ class IndeedScraperV3:
         return jobs
     
     def _extract_jobs_from_json(self, html_content: str) -> List[Dict]:
-        """Extract job data from the JSON embedded in the page"""
+        """Extract job data from the JSON embedded in the page with proper field normalization"""
         try:
             import json
             import re
+            from html import unescape
             
             # Find the JSON data in the script tag
             pattern = r'window\.mosaic\.providerData\["mosaic-provider-jobcards"\]\s*=\s*({.*?});'
@@ -258,42 +259,87 @@ class IndeedScraperV3:
                     elif 'location' in job:
                         location = job['location']
                     
-                    # Extract salary
-                    salary = 'Not specified'
+                    # ===== EXTRACT SALARY WITH PERIOD DETECTION =====
+                    # Handles: $55 - $75 an hour, $95k–$125k, $95,000/year, $140,000 - $150,000 a year
+                    salary = None
+                    salary_period = None
+                    
                     if 'extractedSalary' in job:
                         sal_data = job['extractedSalary']
+                        # Get salary type (hourly, yearly, etc.)
+                        if 'type' in sal_data:
+                            sal_type = sal_data['type'].lower()
+                            if 'hour' in sal_type:
+                                salary_period = 'hour'
+                            elif 'year' in sal_type or 'annual' in sal_type:
+                                salary_period = 'year'
+                            elif 'month' in sal_type:
+                                salary_period = 'month'
+                            elif 'week' in sal_type:
+                                salary_period = 'week'
+                        
+                        # Build salary string
                         if 'max' in sal_data and sal_data.get('max'):
                             salary = f"${sal_data.get('min', 0):,.0f} - ${sal_data['max']:,.0f}"
                         elif 'min' in sal_data and sal_data.get('min'):
                             salary = f"${sal_data['min']:,.0f}"
-                    elif 'salarySnippet' in job:
+                    
+                    # Fallback to salarySnippet text
+                    if not salary and 'salarySnippet' in job:
                         snippet = job['salarySnippet']
                         if 'text' in snippet:
-                            salary = snippet['text']
+                            salary_text = snippet['text']
+                            salary = salary_text
+                            
+                            # Detect period from salary text
+                            salary_lower = salary_text.lower()
+                            if 'hour' in salary_lower or '/hr' in salary_lower:
+                                salary_period = 'hour'
+                            elif 'year' in salary_lower or '/yr' in salary_lower or 'annual' in salary_lower:
+                                salary_period = 'year'
+                            elif 'month' in salary_lower or '/mo' in salary_lower:
+                                salary_period = 'month'
+                            elif 'week' in salary_lower or '/wk' in salary_lower:
+                                salary_period = 'week'
                     
-                    # Extract snippet/summary
-                    summary = job.get('snippet', 'No description')
+                    # ===== EXTRACT JOB TYPE (NOT POSTED DATE!) =====
+                    # Job types: Full-time, Part-time, Contract, Internship, Temporary
+                    job_type = None
                     
-                    # Extract job type
-                    job_type = 'Not specified'
                     if 'jobTypes' in job and job['jobTypes']:
+                        # This is the CORRECT field for job types
                         job_type = ', '.join(job['jobTypes'])
-                    elif 'formattedRelativeTime' in job:
-                        job_type = job['formattedRelativeTime']
                     
-                    # Extract posted date
-                    posted_date = 'Not specified'
+                    # ===== EXTRACT POSTED DATE =====
+                    # This is separate from job type! (e.g., "30+ days ago", "2 days ago")
+                    posted_date = None
                     if 'formattedRelativeTime' in job:
                         posted_date = job['formattedRelativeTime']
                     
+                    # ===== EXTRACT AND CLEAN SUMMARY =====
+                    # Remove HTML tags and get clean text
+                    summary = job.get('snippet', 'No description')
+                    
+                    if summary and summary != 'No description':
+                        # Remove HTML tags
+                        summary = re.sub(r'<[^>]+>', '', summary)
+                        # Decode HTML entities (e.g., &amp; -> &)
+                        summary = unescape(summary)
+                        # Clean up whitespace
+                        summary = re.sub(r'\s+', ' ', summary).strip()
+                        # Remove bullet point markers
+                        summary = summary.replace('•', '').replace('◦', '')
+                        summary = summary.strip()
+                    
                     # Build URL
-                    job_url = f"https://www.indeed.com/viewjob?jk={job_id}" if job_id else 'Not specified'
+                    job_url = f"https://www.indeed.com/viewjob?jk={job_id}" if job_id else None
                     
                     extracted_jobs.append({
                         'title': title,
                         'company': company,
                         'location': location,
                         'salary': salary,
+                        'salary_period': salary_period,
                         'job_type': job_type,
                         'posted_date': posted_date,
                         'summary': summary,
