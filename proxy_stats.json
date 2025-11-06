@@ -1,12 +1,12 @@
 {
   "72.46.139.137:6697": {
-    "success_count": 0,
+    "success_count": 2,
     "failure_count": 0,
     "captcha_count": 0,
     "health_score": "EXCELLENT",
-    "total_sessions": 0,
-    "successful_sessions": 0,
-    "last_used": null,
+    "total_sessions": 1,
+    "successful_sessions": 1,
+    "last_used": "2025-11-06T19:23:53.457297",
     "cooldown_until": null
   },
   "45.196.40.119:6197": {
@@ -70,13 +70,13 @@
     "cooldown_until": null
   },
   "45.196.50.76:6398": {
-    "success_count": 0,
+    "success_count": 2,
     "failure_count": 0,
     "captcha_count": 0,
     "health_score": "EXCELLENT",
-    "total_sessions": 0,
-    "successful_sessions": 0,
-    "last_used": null,
+    "total_sessions": 2,
+    "successful_sessions": 2,
+    "last_used": "2025-11-06T19:12:44.874695",
     "cooldown_until": null
   },
   "154.194.24.252:5862": {

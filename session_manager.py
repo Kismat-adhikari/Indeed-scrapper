@@ -211,10 +211,11 @@ class SessionManager:
             if stats and stats.is_healthy():
                 healthy.append(proxy)
         
-        # Sort by health score and success rate
+        # OPTIMIZATION: Sort by health score, success rate, AND response time (fastest first)
         healthy.sort(key=lambda p: (
             self.proxy_stats[self._get_proxy_key(p)].health_score.value,
-            self.proxy_stats[self._get_proxy_key(p)].success_rate()
+            self.proxy_stats[self._get_proxy_key(p)].success_rate(),
+            -self.proxy_stats[self._get_proxy_key(p)].avg_response_time if self.proxy_stats[self._get_proxy_key(p)].avg_response_time > 0 else 0
         ), reverse=True)
         
         return healthy

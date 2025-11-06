@@ -33,12 +33,12 @@ class HumanBehaviorSimulator:
         self.page_visit_count += 1
         self.last_activity_time = time.time()
         
-        # Initial page load wait (humans need time to process)
-        initial_wait = random.uniform(1.5, 4.0)
+        # Initial page load wait (optimized - humans need time to process)
+        initial_wait = random.uniform(0.8, 2.0)
         time.sleep(initial_wait)
         
-        # Random chance of immediate back/forward (human mistake)
-        if random.random() < 0.05:  # 5% chance
+        # Random chance of immediate back/forward (human mistake) - reduced frequency
+        if random.random() < 0.02:  # 2% chance
             self._simulate_navigation_mistake()
         
         # Focus simulation (click somewhere safe)
@@ -90,6 +90,34 @@ class HumanBehaviorSimulator:
         
         return time.time() - start_time
     
+    def simulate_job_browsing_fast(self, job_count: int) -> float:
+        """
+        OPTIMIZED: Faster but still realistic job browsing behavior.
+        Returns the time spent on the page.
+        """
+        start_time = time.time()
+        
+        # Calculate realistic reading time (50% faster than normal)
+        estimated_reading_time = self._calculate_reading_time(job_count) * 0.5
+        
+        # Simplified browsing pattern - mostly quick scanning
+        patterns = [
+            self._pattern_quick_scan,
+            self._pattern_selective_browsing,
+        ]
+        
+        # Choose pattern
+        pattern = random.choice(patterns)
+        
+        # Execute the selected browsing pattern with reduced time
+        pattern(job_count, estimated_reading_time)
+        
+        # Reduced distraction chance
+        if random.random() < 0.05:  # 5% chance instead of 15%
+            time.sleep(random.uniform(0.5, 1.5))  # Shorter distraction
+        
+        return time.time() - start_time
+    
     def _calculate_reading_time(self, job_count: int) -> float:
         """Calculate realistic reading time based on content."""
         # Estimate words per job posting (title + company + location + snippet)
@@ -106,20 +134,20 @@ class HumanBehaviorSimulator:
     
     def _pattern_quick_scan(self, job_count: int, estimated_time: float):
         """Quick scanning pattern - fast scrolling, minimal stops."""
-        scroll_segments = random.randint(3, 6)
+        scroll_segments = random.randint(2, 4)  # Reduced segments
         time_per_segment = estimated_time * 0.3 / scroll_segments  # Use only 30% of estimated time
         
         for i in range(scroll_segments):
             # Quick scroll down
-            self._scroll_smoothly(random.randint(300, 800), speed='fast')
+            self._scroll_smoothly(random.randint(400, 900), speed='fast')
             
-            # Brief pause to "scan"
-            time.sleep(random.uniform(0.5, 2.0))
+            # Brief pause to "scan" (optimized)
+            time.sleep(random.uniform(0.3, 1.0))
             
-            # Occasional small scroll adjustments
-            if random.random() < 0.4:
+            # Occasional small scroll adjustments (reduced frequency)
+            if random.random() < 0.2:
                 self._scroll_smoothly(random.randint(-100, 100), speed='slow')
-                time.sleep(random.uniform(0.3, 1.0))
+                time.sleep(random.uniform(0.2, 0.6))
     
     def _pattern_detailed_reading(self, job_count: int, estimated_time: float):
         """Detailed reading pattern - slower scrolling, longer pauses."""
@@ -146,35 +174,36 @@ class HumanBehaviorSimulator:
                 self._scroll_smoothly(random.randint(100, 300), speed='medium')
     
     def _pattern_selective_browsing(self, job_count: int, estimated_time: float):
-        """Selective browsing - stop at interesting jobs, skip others."""
+        """Selective browsing - stop at interesting jobs, skip others (optimized)."""
         current_position = 0
         jobs_processed = 0
         
         while jobs_processed < job_count:
             # Scroll to next job(s)
-            scroll_amount = random.randint(200, 500)
-            self._scroll_smoothly(scroll_amount, speed='medium')
+            scroll_amount = random.randint(300, 600)
+            self._scroll_smoothly(scroll_amount, speed='fast')
             current_position += scroll_amount
             
-            # Decide if this job is "interesting"
-            is_interesting = random.random() < 0.4  # 40% of jobs are interesting
+            # Decide if this job is "interesting" (reduced interesting jobs)
+            is_interesting = random.random() < 0.25  # 25% of jobs are interesting
             
             if is_interesting:
-                # Longer pause for interesting jobs
-                time.sleep(random.uniform(2, 6))
+                # Shorter pause for interesting jobs
+                time.sleep(random.uniform(1, 3))
                 
-                # Mouse movement to indicate reading
-                self._simulate_job_card_interaction()
-                
-                # Possible slight scroll adjustment for better reading
+                # Mouse movement to indicate reading (reduced frequency)
                 if random.random() < 0.5:
+                    self._simulate_job_card_interaction()
+                
+                # Less frequent scroll adjustments
+                if random.random() < 0.3:
                     self._scroll_smoothly(random.randint(-50, 50), speed='slow')
-                    time.sleep(random.uniform(1, 2))
+                    time.sleep(random.uniform(0.5, 1.0))
             else:
                 # Quick glance at uninteresting jobs
-                time.sleep(random.uniform(0.5, 1.5))
+                time.sleep(random.uniform(0.2, 0.8))
             
-            jobs_processed += random.randint(1, 3)  # Process 1-3 jobs per iteration
+            jobs_processed += random.randint(2, 4)  # Process 2-4 jobs per iteration
     
     def _pattern_comparison_browsing(self, job_count: int, estimated_time: float):
         """Comparison browsing - scrolling back and forth to compare jobs."""
@@ -384,15 +413,15 @@ class HumanBehaviorSimulator:
                 pass
     
     def simulate_session_break(self):
-        """Simulate longer break between session pages."""
-        # Random break duration (human checking other things)
-        break_duration = random.uniform(2, 8)
+        """Simulate longer break between session pages (optimized)."""
+        # Shorter random break duration
+        break_duration = random.uniform(0.5, 2.0)
         
         print(f"   💤 Taking human-like break: {break_duration:.1f} seconds")
         time.sleep(break_duration)
         
-        # Random chance of window interaction during break
-        if random.random() < 0.3:
+        # Reduced chance of window interaction during break
+        if random.random() < 0.1:
             try:
                 # Minimize/restore or move window
                 self.driver.minimize_window()
